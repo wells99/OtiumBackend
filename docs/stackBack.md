@@ -100,48 +100,49 @@ Para viabilizar o trial e a assinatura, precisamos da seguinte entidade principa
 ## 5. Plano de Implementação Passo a Passo
 
 ### Fase 1: Estruturação das Camadas & Banco de Dados
-- [ ] Instalar as novas dependências (`prisma` ou `drizzle`, `node-cron`, `jsonwebtoken`, `bcryptjs`).
-- [ ] Inicializar o schema do banco de dados (tabelas `User` e `Subscription/Payment`).
-- [ ] Migrar a lógica monolítica de `src/server.js` para `app.js` e a estrutura de pastas proposta.
+- [x] Instalar as novas dependências (`@prisma/client`, `prisma`, `node-cron`, `jsonwebtoken`, `bcryptjs`, `cors`).
+- [x] Inicializar o schema do banco de dados (tabelas `User` e `Payment` com SQLite persistente).
+- [x] Migrar a lógica monolítica de `src/server.js` para `app.js` e a estrutura de pastas proposta em camadas.
 
 ### Fase 2: Evolução do `jellyfinService`
-- [ ] Manter o método existente de criar usuário (`POST /Users/New`).
-- [ ] Adicionar método de **desativação de conta**:
+- [x] Manter o método existente de criar usuário (`POST /Users/New`).
+- [x] Adicionar método de **desativação de conta**:
   - `POST /Users/{userId}/Policy` com `{ IsDisabled: true }`.
-- [ ] Adicionar método de **reativação de conta**:
+- [x] Adicionar método de **reativação de conta**:
   - `POST /Users/{userId}/Policy` com `{ IsDisabled: false }`.
-- [ ] Adicionar método de **derrubar sessões ativas**:
-  - `POST /Sessions/Logout` passando a sessão do usuário quando o trial vencer.
+- [x] Adicionar método de **derrubar sessões ativas**:
+  - `POST /Sessions/Logout` buscando e encerrando as sessões ativas do usuário ao desativar.
 
 ### Fase 3: Módulo de Autenticação e Cálculo do Trial
-- [ ] Criar endpoint `POST /api/auth/register`:
+- [x] Criar endpoint `POST /api/auth/register`:
   - Cria o usuário no banco com `trial_ends_at = hoje + 2 dias` e status `trial_ativo`.
-  - Chama o Jellyfin para criar a conta de streaming.
-- [ ] Criar endpoint `POST /api/auth/login`:
-  - Valida as credenciais.
-  - Verifica se a data atual ultrapassou o `trial_ends_at` (se sim e não pago, responde com status `trial_expirado` e instrução de pagamento).
+  - Chama o Jellyfin para criar a conta de streaming vinculada.
+- [x] Criar endpoint `POST /api/auth/login`:
+  - Valida as credenciais locais com `bcrypt`.
+  - Verifica se a data atual ultrapassou o `trial_ends_at` (se expirado, bloqueia na hora e responde com `403 Forbidden` e status `trial_expirado`).
   - Se válido, retorna o JWT de sessão.
-- [ ] Criar endpoint `GET /api/auth/me`:
+- [x] Criar endpoint `GET /api/auth/me`:
   - Retorna o status atual, tempo restante de trial ou data de expiração da assinatura.
 
 ### Fase 4: Integração com Gateway de Pagamento e Webhooks
-- [ ] Criar `POST /api/payments/create`:
-  - Gera cobrança (PIX / Cartão) na API de pagamentos.
-- [ ] Criar `POST /api/payments/webhook`:
-  - Recebe a notificação de confirmação da operadora de pagamento.
-  - Atualiza o banco do cliente para `status: ativo` e adiciona `+30 dias` na assinatura.
-  - Chama imediatamente o `jellyfinService.enableUser(jellyfin_user_id)`.
+- [x] Criar `POST /api/payments/create`:
+  - Registra a intenção de cobrança vinculada ao usuário.
+- [x] Criar `POST /api/payments/webhook`:
+  - Recebe a notificação de pagamento aprovado.
+  - Atualiza o status do usuário para `ativo` e adiciona `+30 dias` de assinatura.
+  - Chama imediatamente `jellyfinService.setUserDisabledState(jellyfinUserId, false)` desbloqueando o streaming.
 
 ### Fase 5: Cron Job de Bloqueio Automático
-- [ ] Implementar a rotina agendada com `node-cron`:
-  - Roda a cada hora (ou intervalo configurável).
-  - Busca usuários onde `trial_ends_at < NOW()` e status ainda está como `trial_ativo`.
-  - Atualiza o banco para `trial_expirado`.
-  - Executa `jellyfinService.disableUser()` e derruba as sessões ativas.
+- [x] Implementar a rotina agendada com `node-cron` (`src/jobs/checkExpiredTrials.js`):
+  - Roda periodicamente a cada hora.
+  - Varre o banco em busca de contas vencidas (`trial_ends_at < NOW()`).
+  - Atualiza o banco para `trial_expirado` e aciona o Jellyfin para desativar a conta e derrubar streams em andamento.
 
 ### Fase 6: Ajustes no Docker e Testes
-- [ ] Atualizar o `compose.yaml` (incluir volume para persistência do banco SQLite ou serviço PostgreSQL).
-- [ ] Realizar testes de ponta a ponta simulando:
+- [x] Atualizar o `Dockerfile` e `compose.yaml` (volume persistente `otium_db_data` para SQLite).
+- [x] Realizar testes de ponta a ponta simulando:
   1. Criação de conta com 2 dias de trial.
   2. Expiração forçada e verificação do bloqueio no Jellyfin.
   3. Simulação de webhook de pagamento e desbloqueio imediato.
+
+

@@ -1,4 +1,3 @@
-
 services:
   OtiumPlayer:
     build:
@@ -14,6 +13,9 @@ services:
     ports:
       - "3005:3000"
 
+    volumes:
+      - otium_db_data:/app/prisma
+
     init: true
     read_only: true
 
@@ -22,3 +24,6 @@ services:
 
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  otium_db_data:

@@ -79,20 +79,20 @@ src/
 ## 4. Plano de Implementação Passo a Passo
 
 ### Fase 1: Setup do Ambiente e Estrutura Base
-- [ ] Inicializar o projeto com Vite (`npm create vite@latest frontend -- --template react`).
-- [ ] Configurar Tailwind CSS e biblioteca de ícones (`lucide-react`).
-- [ ] Montar a estrutura de pastas e arquivo de variáveis de ambiente (`.env`) contendo a URL base da API.
+- [x] Inicializar o projeto com Vite (`OtiumFront`, React + Vite).
+- [x] Configurar Tailwind CSS e biblioteca de ícones (`lucide-react`).
+- [x] Montar a estrutura de pastas e arquivo de variáveis de ambiente (`.env`) contendo a URL base da API.
 
 ### Fase 2: Autenticação, Trial e Controle de Acesso
-- [ ] Criar o `authService` e a instância do Axios com interceptor de tokens.
-- [ ] Desenvolver as telas de **Cadastro** (iniciando o trial de 2 dias) e **Login**.
-- [ ] Implementar o `AuthGuard` no React Router:
+- [x] Criar o `authService` e a instância do Axios com interceptor de tokens.
+- [x] Desenvolver as telas de **Cadastro** (iniciando o trial de 2 dias) e **Login**.
+- [x] Implementar o `AuthGuard` no React Router:
   - Se não logado $\rightarrow$ Redireciona para `/login`.
   - Se logado com trial/assinatura válidos $\rightarrow$ Permite acesso às rotas internas (`/`, `/watch/:id`).
   - Se logado mas expirado $\rightarrow$ Redireciona obrigatoriamente para `/checkout`.
 
 ### Fase 3: Integração com o Catálogo do Jellyfin
-- [ ] Conectar com a API do Jellyfin (`/Items`) para listar bibliotecas e mídias.
+- [ ] Conectar com a API do Jellyfin (`/Items`) para listar bibliotecas e mídias. *(Implementação inicial existe em `jellyfinService.js`; requer validação com a configuração real de autenticação/CORS do Jellyfin.)*
 - [ ] Montar a tela inicial (`Home.jsx`):
   - Banner principal (Hero item em destaque);
   - Trilhas/Carrosséis por categoria (Continuar assistindo, Lançamentos, etc.);
@@ -108,10 +108,19 @@ src/
   - Atalhos de teclado (Espaço = pause, Setas = avançar/retroceder, F = tela cheia).
 
 ### Fase 5: Tela de Pagamento e Liberação
-- [ ] Desenvolver a tela `Checkout.jsx` informando que o período de testes terminou.
-- [ ] Exibir opções de pagamento (PIX / Cartão) geradas pela sua API de pagamentos.
+- [x] Desenvolver a tela `Checkout.jsx` informando que o período de testes terminou.
+- [ ] Exibir opções de pagamento (PIX / Cartão) geradas pela sua API de pagamentos. *(Aguardando a documentação do provedor; a simulação foi removida.)*
 - [ ] Adicionar verificação de status (polling ou WebSocket): assim que o webhook do pagamento aprovar no backend, o front-end detecta e libera a navegação de volta para o catálogo sem precisar recarregar.
 
 ### Fase 6: Polimento e Proteção Contra Burlar Acesso
 - [ ] Validar comportamento quando a assinatura expira no meio de um vídeo: o backend corta a sessão e o interceptor do Axios no front-end fecha o player e exibe a mensagem de cobrança.
 - [ ] Testar responsividade em dispositivos móveis e navegadores diferentes.
+
+### Estado da implementação no OtiumFront — 25/10/2026
+- Cadastro envia `username`, `password` e `email` para `POST /api/auth/register`, confere a senha e aplica no navegador os limites de nome/senha aceitos pelo backend.
+- Login usa `POST /api/auth/login`; sessão JWT e perfil são mantidos no `localStorage`, e a sessão existente é validada por `GET /api/auth/me`.
+- Os endpoints correspondem às rotas atuais do backend (`src/routes/authRoutes.js`). Defina `VITE_API_URL` no `.env` do frontend apontando para a base `/api` do backend. Em desenvolvimento local, `http://localhost:3000/api` é o padrão do projeto.
+- Checkout agora é uma tela de preparação sem chamadas inventadas a endpoints de pagamento; preços e processamento serão integrados quando a documentação chegar.
+- Validação local em 25/10/2026: o backend iniciou em modo development e `GET http://localhost:3000/api/health` respondeu `200` (`{"status":"ok"}`). A URL pública do Jellyfin respondeu `200`, e uma leitura administrativa autenticada (`GET /Users`) também respondeu `200`.
+- Integração de cadastro validada: foi enviado um cadastro temporário pela rota usada pelo frontend (`POST /api/auth/register`); o backend respondeu `201`, criando a conta no Jellyfin. Em seguida a conta temporária foi removida do Jellyfin (`204`) e a linha correspondente foi removida do banco local (1 registro). Nenhuma conta de teste ficou no ambiente.
+- O build de produção (`npm run build`) concluiu com sucesso. O lint (`npm run lint`) conclui sem erros e mantém dois avisos não bloqueantes: uso de `Date` durante renderização no `Navbar` e exportação do hook junto ao provider em `AuthContext`.
