@@ -40,6 +40,15 @@ export const authService = {
 
     // Cria o usuário na API do Jellyfin
     const jellyfinUser = await jellyfinService.createUser(normalizedUsername, password);
+    let jellyfinAccessToken;
+    try {
+      jellyfinAccessToken = await jellyfinService.authenticateUser(normalizedUsername, password);
+    } catch (err) {
+      await jellyfinService.deleteUser(jellyfinUser.Id).catch((cleanupError) => {
+        console.error("Falha ao remover usuário após erro de autenticação:", cleanupError.message);
+      });
+      throw err;
+    }
 
     // Calcula período de avaliação de 2 dias (ou valor em env.trialDays)
     const trialEndsAt = new Date(Date.now() + env.trialDays * 24 * 60 * 60 * 1000);
@@ -74,6 +83,7 @@ export const authService = {
         trialEndsAt: createdUser.trialEndsAt,
       },
       token,
+      jellyfinAccessToken,
     };
   },
 
@@ -114,6 +124,8 @@ export const authService = {
       throw err;
     }
 
+    const jellyfinAccessToken = await jellyfinService.authenticateUser(user.username, password);
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -134,6 +146,7 @@ export const authService = {
         subscriptionEndsAt: user.subscriptionEndsAt,
       },
       token,
+      jellyfinAccessToken,
     };
   },
 

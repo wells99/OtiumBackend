@@ -123,3 +123,44 @@ export async function terminateUserSessions(userId) {
     console.warn("Erro ao listar/derrubar sessões:", err.message);
   }
 }
+
+
+/** Authenticate a regular Jellyfin user and return that user's scoped token. */
+export async function authenticateUser(username, password) {
+  const response = await fetch(env.jellyfinUrl + "/Users/AuthenticateByName", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: 'MediaBrowser Client="OtiumPlayer", Device="Web Browser", DeviceId="OtiumPlayer-Web", Version="1.0.0"',
+    },
+    body: JSON.stringify({ Username: username, Pw: password }),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) {
+    const err = new Error(response.status === 401 ? "O Jellyfin recusou a autenticação deste usuário." : "Falha ao autenticar usuário no Jellyfin: " + response.status);
+    err.statusCode = response.status === 401 ? 401 : 502;
+    throw err;
+  }
+  const result = await response.json();
+  if (!result.AccessToken) {
+    const err = new Error("O Jellyfin não retornou um token de sessão.");
+    err.statusCode = 502;
+    throw err;
+  }
+  return result.AccessToken;
+}
+
+/** Remove a conta se o login Jellyfin falhar logo após sua criação. */
+export async function deleteUser(userId) {
+  const response = await fetch(env.jellyfinUrl + "/Users/" + encodeURIComponent(userId), {
+    method: "DELETE",
+    headers: getHeaders(),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) {
+    const err = new Error("Falha ao remover usuário do Jellyfin: " + response.status);
+    err.statusCode = 502;
+    throw err;
+  }
+  return true;
+}
