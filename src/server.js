@@ -20,7 +20,16 @@ if (!JELLYFIN_URL || !JELLYFIN_API_KEY) {
 const jellyfinUrl = JELLYFIN_URL.replace(/\/+$/, "");
 
 app.disable("x-powered-by");
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "upgrade-insecure-requests": null,
+      },
+    },
+  })
+);
 app.use(express.json({ limit: "10kb" }));
 
 const registrationLimiter = rateLimit({
@@ -75,6 +84,7 @@ app.post("/api/users", registrationLimiter, async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `MediaBrowser Client="OtiumPlayer", Device="Server", DeviceId="OtiumPlayer-Backend", Version="1.0.0", Token="${JELLYFIN_API_KEY}"`,
         "X-Emby-Token": JELLYFIN_API_KEY,
       },
       body: JSON.stringify({
@@ -94,7 +104,9 @@ app.post("/api/users", registrationLimiter, async (req, res) => {
 
       console.error(
         "Jellyfin recusou a criação de usuário. Status:",
-        response.status
+        response.status,
+        "Detalhes:",
+        await response.text().catch(() => "")
       );
 
       return res.status(502).json({
@@ -111,7 +123,7 @@ app.post("/api/users", registrationLimiter, async (req, res) => {
   } catch (error) {
     console.error(
       "Falha na comunicação com Jellyfin:",
-      error.name === "TimeoutError" ? "timeout" : error.name
+      error.name === "TimeoutError" ? "timeout" : (error.message || error.name)
     );
 
     return res.status(502).json({

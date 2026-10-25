@@ -124,33 +124,53 @@ app.js:1 Failed to load resource: net::ERR_SSL_PROTOCOL_ERROR
 
 **Observação de segurança:** a mensagem do console inclui credenciais digitadas no formulário. Não reutilize essa senha; ela deve ser considerada exposta e trocada caso seja uma senha real.
 
-## 7. Hipótese principal para investigação
+## 7. Causa identificada e correção aplicada
 
-O navegador está carregando a página por HTTP, mas tenta acessar `/styles.css`, `/app.js` e a página de destino por HTTPS. Isso sugere que o navegador pode estar aplicando HTTPS-First/HTTPS automático, uma política HSTS, uma extensão ou uma configuração anterior; também é preciso verificar se os caminhos e o HTML servidos pelo container correspondem aos arquivos atuais.
+A causa primária dos erros `net::ERR_SSL_PROTOCOL_ERROR` e da violação de CSP no formulário foi identificada:
+- O pacote **Helmet (v8)** inclui por padrão a diretiva `upgrade-insecure-requests` em seu Content Security Policy (CSP).
+- Ao acessar a página por HTTP puro (`http://192.168.1.182:3005`), o navegador recebia esse cabeçalho e forçava a conversão de todos os recursos estáticos (`/styles.css`, `/app.js`, `ok.png`) para `https://192.168.1.182:3005/...`.
+- Como a porta 3005 no container fala apenas HTTP, a tentativa de handshake SSL resultava em `ERR_SSL_PROTOCOL_ERROR`.
+- Como o `app.js` não carregava, o `event.preventDefault()` nunca era registrado. O clique no formulário disparava o submit HTML padrão, que também era forçado para HTTPS pelo navegador, violando a política `form-action 'self'`.
 
-Não desativar o Helmet/CSP como primeira medida. A CSP `form-action 'self'` está bloqueando o envio a HTTPS porque a página original foi aberta em HTTP; não é a causa primária. O aviso de `Cross-Origin-Opener-Policy` é secundário e não explica sozinho o CSS ausente.
+### Correção aplicada em `src/server.js`:
+O Helmet foi reconfigurado para anular a diretiva `upgrade-insecure-requests`:
 
-### Diagnóstico sugerido, em ordem
+```javascript
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "upgrade-insecure-requests": null,
+      },
+    },
+  })
+);
+```
 
-1. Abrir explicitamente `http://192.168.1.182:3005` numa janela privada, sem extensões, e confirmar se o navegador muda para HTTPS.
-2. No DevTools → Network, verificar os URLs exatos e os cabeçalhos de resposta de `/`, `/styles.css` e `/app.js`.
-3. Confirmar no `public/index.html` que os recursos são relativos:
-   - `<link rel="stylesheet" href="/styles.css">`
-   - `<script src="/app.js" defer></script>`
-   e que não existe `action="https://..."`, `<base href="https://...">` ou outro URL HTTPS.
-4. Verificar se `public/app.js` está sendo carregado; se não carregar, `event.preventDefault()` não será executado e o formulário tentará o envio tradicional.
-5. Testar os recursos diretamente por HTTP:
-   - `curl -I http://127.0.0.1:3005/styles.css`
-   - `curl -I http://127.0.0.1:3005/app.js`
-   - `curl -s http://127.0.0.1:3005/`
-6. Verificar a versão efetiva dos arquivos dentro do container e reconstruir se necessário:
-   - `docker compose logs --tail=100 OtiumPlayer`
-   - `docker compose up -d --build`
-7. Só depois de o HTTP funcionar, planejar HTTPS real por proxy reverso para uso público.
+## 8. Estado do projeto e próximos passos
 
-## 8. Estado do projeto
+- **Código corrigido:** `src/server.js` atualizado para desativar o upgrade automático para HTTPS no Helmet.
+- **Próximo passo imediato:**
+  1. Reconstruir e subir o container Docker com a nova imagem: feito
+     ```bash
+     docker compose up -d --build
+     ```
+  2. Testar o carregamento da página em `http://192.168.1.182:3005` (preferencialmente em janela anônima para evitar cache anterior). feito
+  3. Validar se `styles.css`, `app.js` e `ok.png` carregam com status 200 via HTTP.
+  passo 3 feito
+  4. Testar a submissão do formulário e validar a criação de usuário no endpoint `/api/users` integrando com o Jellyfin (`POST /Users/New`).
 
-- O container foi criado no Ubuntu/CasaOS.
-- O serviço parece estar acessível na porta `3005`.
-- O problema atual ocorre no carregamento de CSS/JS e no envio do formulário, antes de confirmar a integração de criação de usuário com Jellyfin.
-- A próxima IA deve primeiro diagnosticar a conversão HTTP→HTTPS e validar os recursos estáticos. Não avançar para testes de criação de usuário até o frontend e o JavaScript carregarem corretamente.
+passo 4 testado:
+- Carregamento estático 100% funcional.
+- O formulário enviou a requisição e o backend respondeu com status 502 devido a retorno 401 (Unauthorized) do Jellyfin:
+  `Jellyfin recusou a criação de usuário. Status: 401`
+
+### Causa do 401 e Correção:
+1. O backend estava enviando apenas o cabeçalho legado `X-Emby-Token: JELLYFIN_API_KEY`. Nas versões recentes do Jellyfin (10.9+), este cabeçalho legado foi descontinuado ou restrito em endpoints de administração como `/Users/New`, exigindo o cabeçalho padrão:
+   `Authorization: MediaBrowser Client="OtiumPlayer", Device="Server", DeviceId="OtiumPlayer-Backend", Version="1.0.0", Token="..."`
+2. Foi adicionado o cabeçalho `Authorization` padronizado e a exibição detalhada da resposta de erro do Jellyfin no console do backend.
+3. Se o 401 persistir após o rebuild, verificar se a chave `JELLYFIN_API_KEY` no `.env` foi gerada por um usuário Administrador no painel do Jellyfin (Painel de Controle -> Chaves de API).
+
+## Nesse momento, o sistema foi testado e funcionou corretamenta para a criação de
+## uma nova conta.
