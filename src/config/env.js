@@ -8,6 +8,9 @@ const {
   TRIAL_DAYS = "2",
   JELLYFIN_URL,
   JELLYFIN_API_KEY,
+  INFINITEPAY_API_KEY,
+  INFINITEPAY_HANDLE,
+  PUBLIC_APP_URL = "https://otiumflix.com",
 } = process.env;
 
 if (!JELLYFIN_URL || !JELLYFIN_API_KEY) {
@@ -22,4 +25,7 @@ export const env = {
   trialDays: Number(TRIAL_DAYS) || 2,
   jellyfinUrl: JELLYFIN_URL.replace(/\/+$/, ""),
   jellyfinApiKey: JELLYFIN_API_KEY,
+  infinitePayApiKey: INFINITEPAY_API_KEY || "",
+  infinitePayHandle: INFINITEPAY_HANDLE || "",
+  publicAppUrl: PUBLIC_APP_URL.replace(/\/+$/, ""),
 };

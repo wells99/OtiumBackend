@@ -25,13 +25,13 @@ export const userRepository = {
     });
   },
 
-  async findExpiredTrials(referenceDate = new Date()) {
+  async findExpiredAccounts(referenceDate = new Date()) {
     return prisma.user.findMany({
       where: {
-        status: "trial_ativo",
-        trialEndsAt: {
-          lt: referenceDate,
-        },
+        OR: [
+          { status: "trial_ativo", trialEndsAt: { lt: referenceDate } },
+          { status: "ativo", subscriptionEndsAt: { lt: referenceDate } },
+        ],
       },
     });
   },

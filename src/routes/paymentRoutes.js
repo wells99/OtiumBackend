@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { paymentController } from "../controllers/paymentController.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { paymentCreationLimiter } from "../middlewares/rateLimiter.js";
 
 const router = Router();
 
-// Criação de intenção de pagamento (autenticada)
-router.post("/create", authMiddleware, paymentController.create);
+router.post("/create", authMiddleware, paymentCreationLimiter, paymentController.create);
+router.post("/confirm", authMiddleware, paymentController.confirm);
 
-// Webhook de notificação de pagamento (aberto para as operadoras)
+// O webhook é confirmado no servidor por meio do endpoint payment_check.
 router.post("/webhook", paymentController.webhook);
 
 export default router;

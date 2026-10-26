@@ -19,3 +19,11 @@ export const loginLimiter = rateLimit({
     error: "Muitas tentativas de login. Tente novamente em alguns minutos.",
   },
 });
+
+export const paymentCreationLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Muitas cobranças solicitadas. Tente novamente mais tarde." },
+});

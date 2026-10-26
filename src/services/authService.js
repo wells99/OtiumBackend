@@ -115,16 +115,13 @@ export const authService = {
       user.status = "trial_expirado";
     }
 
-    // Se estiver expirado ou bloqueado, informa o status para que o front-end envie para pagamento
-    if (user.status === "trial_expirado" || user.status === "bloqueado") {
-      const err = new Error("Seu período de teste expirou. Assine para continuar assistindo.");
-      err.statusCode = 403;
-      err.accountStatus = user.status;
-      err.userId = user.id;
-      throw err;
+    if (user.status === "ativo" && user.subscriptionEndsAt && user.subscriptionEndsAt < now) {
+      await userRepository.update(user.id, { status: "bloqueado" });
+      if (user.jellyfinUserId) {
+        await jellyfinService.setUserDisabledState(user.jellyfinUserId, true).catch(() => {});
+      }
+      user.status = "bloqueado";
     }
-
-    const jellyfinAccessToken = await jellyfinService.authenticateUser(user.username, password);
 
     const token = jwt.sign(
       {
@@ -135,6 +132,12 @@ export const authService = {
       env.jwtSecret,
       { expiresIn: "7d" }
     );
+
+    // Contas vencidas recebem sessão local para acessar o checkout, sem sessão Jellyfin.
+    const paymentOnlySession = user.status === "trial_expirado" || user.status === "bloqueado";
+    const jellyfinAccessToken = paymentOnlySession
+      ? null
+      : await jellyfinService.authenticateUser(user.username, password);
 
     return {
       user: {
@@ -147,6 +150,7 @@ export const authService = {
       },
       token,
       jellyfinAccessToken,
+      requiresPayment: paymentOnlySession,
     };
   },
 
@@ -163,6 +167,14 @@ export const authService = {
 
     if (currentStatus === "trial_ativo" && user.trialEndsAt < now) {
       currentStatus = "trial_expirado";
+      await userRepository.update(user.id, { status: currentStatus });
+      if (user.jellyfinUserId) {
+        await jellyfinService.setUserDisabledState(user.jellyfinUserId, true).catch(() => {});
+      }
+    }
+
+    if (currentStatus === "ativo" && user.subscriptionEndsAt && user.subscriptionEndsAt < now) {
+      currentStatus = "bloqueado";
       await userRepository.update(user.id, { status: currentStatus });
       if (user.jellyfinUserId) {
         await jellyfinService.setUserDisabledState(user.jellyfinUserId, true).catch(() => {});
