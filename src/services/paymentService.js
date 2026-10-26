@@ -48,7 +48,7 @@ export const paymentService = {
     const requestBody = {
       order_nsu: orderNsu,
       redirect_url: redirectUrl,
-      items: [{ quantity: 1, price: SUBSCRIPTION_PRICE_CENTS, description: "Assinatura OtiumFlix por 30 dias" }],
+      items: [{ quantity: 1, price: SUBSCRIPTION_PRICE_CENTS, description: "Assinatura OtiumFlix" }],
       options: {
         single_payment: true,
         valid_until: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
