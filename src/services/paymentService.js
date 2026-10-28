@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { env } from "../config/env.js";
 import { paymentRepository } from "../repositories/paymentRepository.js";
+import { userRepository } from "../repositories/userRepository.js";
 import * as jellyfinService from "./jellyfinService.js";
 
 const INFINITEPAY_LINKS_URL = "https://api.checkout.infinitepay.io/links";
@@ -33,6 +34,9 @@ export const paymentService = {
   async createPayment({ userId }) {
     requirePaymentConfig();
 
+    const user = await userRepository.findById(userId);
+    if (!user) throw serviceError("Usuário não encontrado.", 404);
+
     const orderNsu = randomUUID();
     const payment = await paymentRepository.create({
       userId,
@@ -49,8 +53,13 @@ export const paymentService = {
       order_nsu: orderNsu,
       redirect_url: redirectUrl,
       items: [{ quantity: 1, price: SUBSCRIPTION_PRICE_CENTS, description: "Assinatura OtiumFlix" }],
+      customer: {
+        name: user.username,
+        ...(user.email ? { email: user.email } : {}),
+      },
       options: {
         single_payment: true,
+        require_delivery_address: false,
         valid_until: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         payment_methods_enabled: ["credit_card", "pix"],
       },
