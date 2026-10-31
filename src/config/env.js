@@ -3,7 +3,7 @@ import "dotenv/config";
 const {
   PORT = 3000,
   NODE_ENV = "development",
-  DATABASE_URL = "file:./dev.db",
+  DATABASE_URL,
   JWT_SECRET = "chave_secreta_padrao_trocar_em_producao",
   TRIAL_DAYS = "2",
   JELLYFIN_URL,
@@ -15,6 +15,10 @@ const {
 
 if (!JELLYFIN_URL || !JELLYFIN_API_KEY) {
   throw new Error("Configure JELLYFIN_URL e JELLYFIN_API_KEY no arquivo .env");
+}
+
+if (!DATABASE_URL || !DATABASE_URL.startsWith("mysql://")) {
+  throw new Error("Configure DATABASE_URL com a conexão MySQL da Hostinger no arquivo .env");
 }
 
 export const env = {

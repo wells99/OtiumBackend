@@ -10,11 +10,14 @@ services:
     env_file:
       - .env
 
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
     ports:
       - "3005:3000"
-
-    volumes:
-      - otium_db_data:/app/prisma
 
     init: true
     read_only: true
@@ -24,6 +27,3 @@ services:
 
     security_opt:
       - no-new-privileges:true
-
-volumes:
-  otium_db_data:

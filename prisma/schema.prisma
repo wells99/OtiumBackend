@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -19,7 +19,7 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  payments           Payment[]
+  payments Payment[]
 }
 
 model Payment {
@@ -31,7 +31,7 @@ model Payment {
   provider          String
   externalPaymentId String?  @unique
   status            String   @default("pending") // pending, approved, rejected, refunded
-  rawWebhook        String?
+  rawWebhook        String?  @db.Text
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
