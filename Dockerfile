@@ -21,7 +21,7 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev && npx prisma generate
+RUN npm ci --omit=dev && npm run prisma:generate
 
 COPY --from=build /app/src ./src
 COPY --from=build /app/public ./public
@@ -32,4 +32,4 @@ USER node
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node src/server.js"]
+CMD ["npm", "start"]
