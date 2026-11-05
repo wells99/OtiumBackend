@@ -1,10 +1,11 @@
 import { authService } from "../services/authService.js";
+import { enqueueRegistration } from "../services/registrationQueue.js";
 
 export const authController = {
   async register(req, res, next) {
     try {
       const { username, password, email } = req.body ?? {};
-      const result = await authService.register({ username, password, email });
+      const result = await enqueueRegistration(() => authService.register({ username, password, email }));
       return res.status(201).json(result);
     } catch (err) {
       next(err);
