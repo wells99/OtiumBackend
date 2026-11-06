@@ -55,6 +55,21 @@ export async function getUser(userId) {
   return response.json();
 }
 
+/** Lista contas Jellyfin usando a chave administrativa configurada no backend. */
+export async function getUsers() {
+  const response = await fetch(`${env.jellyfinUrl}/Users`, {
+    method: "GET",
+    headers: getHeaders(),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    const err = new Error(`Falha ao listar usuários do Jellyfin: ${response.status}`);
+    err.statusCode = 502;
+    throw err;
+  }
+  return response.json();
+}
+
 /**
  * Atualiza a política do usuário para desativar ou reativar (IsDisabled: true/false)
  */

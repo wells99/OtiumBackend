@@ -97,6 +97,16 @@ export const authService = {
       throw err;
     }
 
+    // Contas importadas do Jellyfin começam sem hash local. Valide no Jellyfin
+    // e grave o hash após o primeiro login bem-sucedido.
+    let jellyfinAccessTokenFromValidation = null;
+    if (!user.passwordHash) {
+      jellyfinAccessTokenFromValidation = await jellyfinService.authenticateUser(normalizedUsername, password);
+      const passwordHash = await bcrypt.hash(password, 10);
+      await userRepository.update(user.id, { passwordHash });
+      user.passwordHash = passwordHash;
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       const err = new Error("Usuário ou senha incorretos.");
@@ -137,7 +147,7 @@ export const authService = {
     const paymentOnlySession = user.status === "trial_expirado" || user.status === "bloqueado";
     const jellyfinAccessToken = paymentOnlySession
       ? null
-      : await jellyfinService.authenticateUser(user.username, password);
+      : jellyfinAccessTokenFromValidation || await jellyfinService.authenticateUser(user.username, password);
 
     return {
       user: {

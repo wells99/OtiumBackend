@@ -11,6 +11,8 @@ const {
   INFINITEPAY_API_KEY,
   INFINITEPAY_HANDLE,
   PUBLIC_APP_URL = "https://otiumflix.com",
+  USER_SYNC_ENABLED = "false",
+  USER_SYNC_KEY = "",
 } = process.env;
 
 if (!JELLYFIN_URL || !JELLYFIN_API_KEY) {
@@ -19,6 +21,10 @@ if (!JELLYFIN_URL || !JELLYFIN_API_KEY) {
 
 if (!DATABASE_URL || !DATABASE_URL.startsWith("mysql://")) {
   throw new Error("Configure DATABASE_URL com a conexão MySQL da Hostinger no arquivo .env");
+}
+
+if (USER_SYNC_ENABLED.toLowerCase() === "true" && USER_SYNC_KEY.trim().length < 32) {
+  throw new Error("USER_SYNC_KEY deve ter pelo menos 32 caracteres quando USER_SYNC_ENABLED=true.");
 }
 
 export const env = {
@@ -32,4 +38,6 @@ export const env = {
   infinitePayApiKey: INFINITEPAY_API_KEY || "",
   infinitePayHandle: INFINITEPAY_HANDLE || "",
   publicAppUrl: PUBLIC_APP_URL.replace(/\/+$/, ""),
+  userSyncEnabled: USER_SYNC_ENABLED.toLowerCase() === "true",
+  userSyncKey: USER_SYNC_KEY,
 };
