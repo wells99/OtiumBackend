@@ -16,9 +16,24 @@ model User {
   status             String    @default("trial_ativo") // trial_ativo, trial_expirado, ativo, bloqueado
   trialEndsAt        DateTime
   subscriptionEndsAt DateTime?
+  planCode           String    @default("standard")
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  plan     Plan      @relation(fields: [planCode], references: [code], onDelete: Restrict)
+  payments Payment[]
+  youtubeChannels UserYoutubeChannel[]
+}
+
+model Plan {
+  code                String   @id @db.VarChar(64)
+  name                String   @db.VarChar(100)
+  maxYoutubeChannels Int      @default(2)
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  users    User[]
   payments Payment[]
 }
 
@@ -29,9 +44,66 @@ model Payment {
   amount            Float
   currency          String   @default("BRL")
   provider          String
+  planCode          String?  @db.VarChar(64)
   externalPaymentId String?  @unique
   status            String   @default("pending") // pending, approved, rejected, refunded
   rawWebhook        String?  @db.Text
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  plan Plan? @relation(fields: [planCode], references: [code], onDelete: SetNull)
+}
+
+model YoutubeChannel {
+  id            String   @id @db.VarChar(24)
+  name          String   @db.VarChar(191)
+  url           String   @db.Text
+  addedAt       DateTime @default(now())
+  lastCheckedAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users  UserYoutubeChannel[]
+  videos YoutubeVideo[]
+}
+
+model UserYoutubeChannel {
+  userId    String
+  channelId String   @db.VarChar(24)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel YoutubeChannel @relation(fields: [channelId], references: [id], onDelete: Restrict)
+
+  @@id([userId, channelId])
+  @@index([channelId, status])
+}
+
+model YoutubeVideo {
+  id          String   @id @db.VarChar(20)
+  channelId   String   @db.VarChar(24)
+  title       String   @db.Text
+  publishedAt DateTime
+  status      String   @default("discovered")
+  attempts    Int      @default(0)
+  lastError   String?  @db.Text
+  nextRetryAt DateTime?
+  metubeJobId String?  @db.VarChar(191)
+  queuedAt    DateTime?
+  downloadedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channel YoutubeChannel @relation(fields: [channelId], references: [id], onDelete: Restrict)
+
+  @@index([channelId, publishedAt])
+  @@index([status, createdAt])
+}
+
+model YoutubeWorkerLock {
+  id         String   @id @db.VarChar(64)
+  ownerToken String?  @db.VarChar(64)
+  lockedUntil DateTime
+  updatedAt  DateTime @updatedAt
 }

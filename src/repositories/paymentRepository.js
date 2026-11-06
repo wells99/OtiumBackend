@@ -72,7 +72,11 @@ export const paymentRepository = {
       });
       const user = await transaction.user.update({
         where: { id: payment.userId },
-        data: { status: "ativo", subscriptionEndsAt },
+        data: {
+          status: "ativo",
+          subscriptionEndsAt,
+          ...(payment.planCode ? { planCode: payment.planCode } : {}),
+        },
       });
 
       return { payment, user, subscriptionEndsAt, alreadyApproved: false };

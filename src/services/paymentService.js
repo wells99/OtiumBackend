@@ -40,6 +40,7 @@ export const paymentService = {
     const orderNsu = randomUUID();
     const payment = await paymentRepository.create({
       userId,
+      planCode: user.planCode,
       amount: SUBSCRIPTION_PRICE_REAIS,
       currency: "BRL",
       provider: "infinitepay",

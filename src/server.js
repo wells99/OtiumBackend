@@ -2,12 +2,14 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import prisma from "./config/database.js";
 import { initTrialExpirationJob } from "./jobs/checkExpiredTrials.js";
+import { initYoutubeChannelWorker } from "./jobs/youtubeChannelWorker.js";
 
 const server = app.listen(env.port, "0.0.0.0", () => {
   console.log(`[Server] OtiumPlayer Back-end rodando na porta ${env.port} em modo ${env.nodeEnv}`);
 
   // Inicia a rotina agendada de verificação de trials
   initTrialExpirationJob();
+  initYoutubeChannelWorker();
 });
 
 // Encerramento gracioso

@@ -27,3 +27,11 @@ export const paymentCreationLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Muitas cobranças solicitadas. Tente novamente mais tarde." },
 });
+
+export const youtubeChannelAddLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas de adicionar canais. Tente novamente mais tarde." },
+});

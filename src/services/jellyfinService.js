@@ -70,6 +70,22 @@ export async function getUsers() {
   return response.json();
 }
 
+/** Starts a Jellyfin library scan after a completed MeTube download. */
+export async function refreshLibrary() {
+  const response = await fetch(`${env.jellyfinUrl}/Library/Refresh`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({}),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    const error = new Error(`Falha ao iniciar atualização da biblioteca Jellyfin: ${response.status}`);
+    error.statusCode = 502;
+    throw error;
+  }
+  return true;
+}
+
 /**
  * Atualiza a política do usuário para desativar ou reativar (IsDisabled: true/false)
  */

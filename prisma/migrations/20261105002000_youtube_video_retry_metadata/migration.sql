@@ -1,0 +1,3 @@
+ALTER TABLE `YoutubeVideo`
+  ADD COLUMN `nextRetryAt` DATETIME(3) NULL,
+  ADD COLUMN `metubeJobId` VARCHAR(191) NULL;
